@@ -6,29 +6,50 @@ import { tickTodaysMeal } from './meals.js';
 import { findStudentByToken } from './students.js';
 
 const { PORT = 3000 } = process.env;
-for (const name of ['MEAL_STAFF_KEY', 'DORM_STAFF_KEY', 'CLINIC_STAFF_KEY']) {
-  if ((process.env[name] ?? '').length < 16) {
-    console.error(`Set ${name} in backend/.env to a random value of at least 16 characters.`);
+const PIN_NAMES = ['MEAL_STAFF_PIN', 'DORM_STAFF_PIN', 'CLINIC_STAFF_PIN'];
+for (const name of PIN_NAMES) {
+  if (!/^\d{4}$/.test(process.env[name] ?? '')) {
+    console.error(`Set ${name} in backend/.env to a 4-digit PIN.`);
     process.exit(1);
   }
 }
+if (new Set(PIN_NAMES.map((name) => process.env[name])).size !== PIN_NAMES.length) {
+  console.error('Give each service a different PIN in backend/.env.');
+  process.exit(1);
+}
 
+const MAX_WRONG_PINS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000;
 const sha256 = (value) => createHash('sha256').update(value).digest();
 
-// Each service has its own key, so cafeteria staff can't read or write clinic records.
-function requireStaffKey(envName) {
+// Each service has its own PIN, so cafeteria staff can't read or write clinic records.
+// Four digits are easy to guess, so each device gets 5 wrong tries per service every 15 minutes.
+function requireStaffPin(envName) {
   const expected = sha256(process.env[envName]);
+  const wrongTries = new Map();
   return (req, res, next) => {
-    const key = req.get('Authorization')?.replace(/^Bearer /, '') ?? '';
-    // Hashing gives equal-length buffers, which timingSafeEqual requires.
-    if (!timingSafeEqual(sha256(key), expected)) {
-      return res.status(401).json({ error: 'Staff key is not valid.' });
+    const now = Date.now();
+    let tries = wrongTries.get(req.ip);
+    if (tries && now - tries.firstAt >= LOCKOUT_MS) {
+      wrongTries.delete(req.ip);
+      tries = undefined;
     }
+    if (tries?.count >= MAX_WRONG_PINS) {
+      const minutes = Math.ceil((tries.firstAt + LOCKOUT_MS - now) / 60_000);
+      return res.status(429).json({ error: `Too many wrong PINs. Try again in ${minutes} min.` });
+    }
+    const pin = req.get('Authorization')?.replace(/^Bearer /, '') ?? '';
+    // Hashing gives equal-length buffers, which timingSafeEqual requires.
+    if (!timingSafeEqual(sha256(pin), expected)) {
+      wrongTries.set(req.ip, { count: (tries?.count ?? 0) + 1, firstAt: tries?.firstAt ?? now });
+      return res.status(401).json({ error: 'Staff PIN is not valid.' });
+    }
+    wrongTries.delete(req.ip);
     next();
   };
 }
 
-// Every service answers GET /staff so the app can check a key at sign-in.
+// Every service answers GET /staff so the app can check a PIN at sign-in.
 function serviceRouter() {
   const router = express.Router();
   router.use(express.json());
@@ -78,9 +99,9 @@ clinic.post('/visits', withStudent, (req, res) => {
 
 const app = express();
 app.disable('x-powered-by');
-app.use('/api/meals', requireStaffKey('MEAL_STAFF_KEY'), meals);
-app.use('/api/dorm', requireStaffKey('DORM_STAFF_KEY'), dorm);
-app.use('/api/clinic', requireStaffKey('CLINIC_STAFF_KEY'), clinic);
+app.use('/api/meals', requireStaffPin('MEAL_STAFF_PIN'), meals);
+app.use('/api/dorm', requireStaffPin('DORM_STAFF_PIN'), dorm);
+app.use('/api/clinic', requireStaffPin('CLINIC_STAFF_PIN'), clinic);
 
 // Replaces Express's default handler, which sends stack traces to clients outside production.
 app.use((err, req, res, next) => {

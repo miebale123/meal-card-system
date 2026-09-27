@@ -17,7 +17,7 @@ async function request(path, staffKey, init = {}) {
   } catch {
     throw new Error(`Can’t reach the server at ${API_URL}. Check that this phone is on the same Wi-Fi as the server.`);
   }
-  if (response.status === 401) throw new StaffKeyRejectedError('That staff key isn’t valid.');
+  if (response.status === 401) throw new StaffKeyRejectedError('That PIN isn’t right. Try again.');
   if (!response.ok) {
     const { error } = await response.json().catch(() => ({}));
     throw new Error(error ?? `The server couldn’t complete this request (error ${response.status}). Try again.`);
@@ -30,7 +30,7 @@ async function send(method, path, staffKey, body) {
   return response.json();
 }
 
-// service is 'meals', 'dorm', or 'clinic'; each has its own staff key.
+// service is 'meals', 'dorm', or 'clinic'; each has its own staff PIN.
 export async function checkStaffKey(service, staffKey) {
   await request(`/api/${service}/staff`, staffKey);
 }
