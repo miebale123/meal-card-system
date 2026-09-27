@@ -1,36 +1,14 @@
 import { useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { scanMealCard, StaffKeyRejectedError } from './api';
-import Button from './Button';
+import { StaffKeyRejectedError } from './api';
+import Button, { TextButton } from './Button';
 import { colors, fontSize } from './theme';
+import Verdict, { notChecked, unknownCard } from './Verdict';
 
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
-
-function toVerdict({ result, student, tickedAt }) {
-  if (result === 'ticked') {
-    return { color: colors.serve, title: 'Meal ticked', student, action: 'Scan next card' };
-  }
-  if (result === 'already_ticked') {
-    return {
-      color: colors.refuse,
-      title: 'Already ate today',
-      student,
-      note: `Ticked at ${timeFormat.format(new Date(tickedAt))}`,
-      action: 'Scan next card',
-    };
-  }
-  return {
-    color: colors.refuse,
-    title: 'Card not recognized',
-    note: 'This QR code isn’t a registered meal card.',
-    action: 'Scan next card',
-  };
-}
-
-export default function ScannerScreen({ staffKey, onSignOut }) {
+// Scans student QR codes. onScan(qrToken) resolves to a verdict to show, or null once the screen moves on.
+export default function QrScanner({ prompt, onScan, onSignOut }) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [checking, setChecking] = useState(false);
@@ -43,19 +21,19 @@ export default function ScannerScreen({ staffKey, onSignOut }) {
     scanLock.current = true;
     setChecking(true);
     try {
-      setVerdict(toVerdict(await scanMealCard(staffKey, data)));
+      setVerdict(await onScan(data));
     } catch (error) {
       if (error instanceof StaffKeyRejectedError) {
         onSignOut();
         return;
       }
-      setVerdict({ color: colors.caution, title: 'Card not checked', note: error.message, action: 'Scan again' });
+      setVerdict(notChecked(error.message));
     } finally {
       setChecking(false);
     }
   }
 
-  function scanNext() {
+  function scanAgain() {
     setVerdict(null);
     scanLock.current = false;
   }
@@ -64,10 +42,9 @@ export default function ScannerScreen({ staffKey, onSignOut }) {
 
   if (!permission.granted) {
     return (
-      <View style={[styles.permission, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.permission, { paddingBottom: insets.bottom + 24 }]}>
         <Text style={styles.title}>Allow camera access</Text>
-        <Text style={styles.body}>The camera is only used to scan students’ meal cards.</Text>
+        <Text style={styles.body}>The camera is only used to scan students’ QR codes.</Text>
         {permission.canAskAgain ? (
           <Button label="Allow camera" onPress={requestPermission} />
         ) : (
@@ -79,7 +56,6 @@ export default function ScannerScreen({ staffKey, onSignOut }) {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="light" />
       <CameraView
         style={StyleSheet.absoluteFill}
         facing="back"
@@ -94,29 +70,35 @@ export default function ScannerScreen({ staffKey, onSignOut }) {
         ]}
       >
         {verdict ? (
-          <>
-            <Text style={[styles.title, styles.onColor]}>{verdict.title}</Text>
-            {verdict.student ? (
-              <View>
-                <Text style={[styles.name, styles.onColor]}>{verdict.student.name}</Text>
-                <Text style={[styles.body, styles.onColor]}>{verdict.student.id}</Text>
-              </View>
-            ) : null}
-            {verdict.note ? <Text style={[styles.body, styles.onColor]}>{verdict.note}</Text> : null}
-            <Button label={verdict.action} onPress={scanNext} color={colors.card} labelColor={verdict.color} />
-          </>
+          <Verdict verdict={verdict} onDone={scanAgain} />
         ) : (
           <View style={styles.idle}>
-            <Text style={[styles.body, styles.idleText]}>
-              {checking ? 'Checking card…' : 'Point the camera at a student’s meal card.'}
-            </Text>
-            <Pressable accessibilityRole="button" hitSlop={12} onPress={onSignOut}>
-              <Text style={styles.signOut}>Sign out</Text>
-            </Pressable>
+            <Text style={[styles.body, styles.idleText]}>{checking ? 'Checking card…' : prompt}</Text>
+            <TextButton label="Sign out" onPress={onSignOut} />
           </View>
         )}
       </View>
     </View>
+  );
+}
+
+// Looks up each scanned card with lookup(staffKey, qrToken), then renders children(card, scanNext) for the student.
+export function ScanStudent({ staffKey, lookup, onSignOut, children }) {
+  const [card, setCard] = useState(null);
+
+  if (card) return children(card, () => setCard(null));
+
+  return (
+    <QrScanner
+      prompt="Point the camera at a student’s QR code."
+      onScan={async (qrToken) => {
+        const found = await lookup(staffKey, qrToken);
+        if (found.result === 'unknown_card') return unknownCard;
+        setCard({ ...found, qrToken });
+        return null;
+      }}
+      onSignOut={onSignOut}
+    />
   );
 }
 
@@ -158,21 +140,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.ink,
   },
-  name: {
-    fontSize: fontSize.body,
-    fontWeight: '600',
-    color: colors.ink,
-  },
   body: {
     fontSize: fontSize.body,
     color: colors.muted,
-  },
-  onColor: {
-    color: colors.card,
-  },
-  signOut: {
-    fontSize: fontSize.body,
-    fontWeight: '600',
-    color: colors.ink,
   },
 });

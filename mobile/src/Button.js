@@ -18,6 +18,14 @@ export default function Button({ label, onPress, disabled = false, color = color
   );
 }
 
+export function TextButton({ label, onPress }) {
+  return (
+    <Pressable accessibilityRole="button" hitSlop={12} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+      <Text style={[styles.label, styles.textLabel]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   button: {
     minHeight: 52,
@@ -30,5 +38,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: fontSize.body,
     fontWeight: '600',
+  },
+  textLabel: {
+    color: colors.ink,
+    textAlign: 'center',
   },
 });

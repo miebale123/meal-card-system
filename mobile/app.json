@@ -2,6 +2,7 @@
   "expo": {
     "name": "Meal Card Scanner",
     "slug": "meal-card-scanner",
+    "scheme": "meal-card-scanner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -25,11 +26,12 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to scan students' meal cards.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to scan students' QR codes.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-router"
     ]
   }
 }

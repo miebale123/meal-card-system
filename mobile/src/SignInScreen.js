@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text } from 'react-native';
 import { checkStaffKey } from './api';
 import Button from './Button';
+import Field from './Field';
+import FormScreen, { FormError } from './FormScreen';
 import { colors, fontSize } from './theme';
 
-export default function SignInScreen({ onSignIn }) {
+export default function SignInScreen({ service, label, onSignIn }) {
   const [staffKey, setStaffKey] = useState('');
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState(null);
@@ -17,7 +17,7 @@ export default function SignInScreen({ onSignIn }) {
     setChecking(true);
     setError(null);
     try {
-      await checkStaffKey(key);
+      await checkStaffKey(service, key);
       await onSignIn(key);
     } catch (e) {
       setError(e.message);
@@ -26,18 +26,14 @@ export default function SignInScreen({ onSignIn }) {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <StatusBar style="dark" />
-      <Text style={styles.title}>Meal card scanner</Text>
+    <FormScreen>
       <Text style={styles.body}>
-        Enter the staff key from the cafeteria office. You only need to do this once on this phone.
+        Enter the {label} staff key. You only need to do this once on this phone.
       </Text>
-      <TextInput
-        style={styles.input}
+      <Field
+        label="Staff key"
         value={staffKey}
         onChangeText={setStaffKey}
-        placeholder="Staff key"
-        placeholderTextColor={colors.muted}
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
@@ -45,41 +41,15 @@ export default function SignInScreen({ onSignIn }) {
         returnKeyType="go"
         onSubmitEditing={handleSignIn}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <FormError message={error} />
       <Button label={checking ? 'Checking…' : 'Sign in'} onPress={handleSignIn} disabled={checking || !key} />
-    </SafeAreaView>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    padding: 24,
-    gap: 16,
-    backgroundColor: colors.card,
-  },
-  title: {
-    fontSize: fontSize.display,
-    fontWeight: '700',
-    color: colors.ink,
-  },
   body: {
     fontSize: fontSize.body,
     color: colors.muted,
-  },
-  input: {
-    minHeight: 52,
-    paddingHorizontal: 16,
-    fontSize: fontSize.body,
-    color: colors.ink,
-    borderWidth: 1.5,
-    borderColor: colors.muted,
-    borderRadius: 14,
-    borderCurve: 'continuous',
-  },
-  error: {
-    fontSize: fontSize.body,
-    fontWeight: '600',
-    color: colors.refuse,
   },
 });

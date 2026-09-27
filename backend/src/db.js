@@ -16,4 +16,20 @@ db.exec(`
     ticked_at  TEXT NOT NULL,
     PRIMARY KEY (student_id, meal_date)
   );
+
+  CREATE TABLE IF NOT EXISTS dorm_assignments (
+    student_id TEXT PRIMARY KEY REFERENCES students (id),
+    room       TEXT NOT NULL COLLATE NOCASE,
+    bed        TEXT NOT NULL COLLATE NOCASE,
+    item_count INTEGER NOT NULL,
+    UNIQUE (room, bed)
+  );
+
+  CREATE TABLE IF NOT EXISTS clinic_visits (
+    id           INTEGER PRIMARY KEY,
+    student_id   TEXT NOT NULL REFERENCES students (id),
+    diagnosis    TEXT NOT NULL,
+    prescription TEXT NOT NULL,
+    visited_at   TEXT NOT NULL
+  );
 `);
