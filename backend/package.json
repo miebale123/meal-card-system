@@ -1,0 +1,16 @@
+{
+  "name": "meal-card-backend",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --env-file=.env src/server.js",
+    "add-student": "node scripts/add-student.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "qrcode": "^1.5.4"
+  }
+}
