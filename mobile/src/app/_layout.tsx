@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from '../auth';
 import { colors } from '../theme';
 
@@ -19,7 +20,9 @@ function RootNavigator() {
   const service = session?.user.service;
 
   return (
-    <Stack screenOptions={{ headerTintColor: colors.ink, contentStyle: { backgroundColor: colors.card } }}>
+    <Stack
+      screenOptions={{ headerTintColor: colors.ink, contentStyle: [styles.content, Platform.OS === 'web' && styles.webColumn] }}
+    >
       <Stack.Protected guard={!session}>
         <Stack.Screen name="index" options={{ title: 'Sign in' }} />
       </Stack.Protected>
@@ -35,3 +38,15 @@ function RootNavigator() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    backgroundColor: colors.card,
+  },
+  // The screens are laid out for phones, so wide browser windows get a centered column.
+  webColumn: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+  },
+});

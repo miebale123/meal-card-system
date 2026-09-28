@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express from 'express';
 import { authRouter, requireService } from './auth.js';
 import { addClinicVisit } from './clinic.js';
@@ -5,7 +6,8 @@ import { getDormAssignment, saveDormAssignment } from './dorm.js';
 import { tickTodaysMeal } from './meals.js';
 import { findStudentByToken } from './students.js';
 
-const { PORT = 3000 } = process.env;
+// CORS_ORIGIN is a comma-separated list; the default is Expo's web dev server.
+const { PORT = 3000, CORS_ORIGIN = 'http://localhost:8081' } = process.env;
 
 // Bodies are parsed only after requireService has let the request through.
 const serviceRouter = () => express.Router().use(express.json());
@@ -52,6 +54,8 @@ clinic.post('/visits', withStudent, (req, res) => {
 
 const app = express();
 app.disable('x-powered-by');
+// Only browsers enforce CORS, so this limits which websites can call the API; the phone app is unaffected.
+app.use(cors({ origin: CORS_ORIGIN.split(',').map((origin) => origin.trim()) }));
 app.use('/api/auth', authRouter);
 // Each account belongs to one service, so cafeteria staff can't read or write clinic records.
 app.use('/api/meals', requireService('meals'), meals);

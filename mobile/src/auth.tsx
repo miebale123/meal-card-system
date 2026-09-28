@@ -1,11 +1,11 @@
-import * as SecureStore from 'expo-secure-store';
 import { createContext, use, useEffect, useState, type PropsWithChildren } from 'react';
 import { login, type Session } from './api';
+import * as storage from './storage';
 
 const STORAGE_KEY = 'session';
 
 type Auth = {
-  // undefined while secure storage loads, null when signed out.
+  // undefined while storage loads, null when signed out.
   session: Session | null | undefined;
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -13,22 +13,22 @@ type Auth = {
 
 const AuthContext = createContext<Auth | null>(null);
 
-// Keeps the signed-in account on this phone until it signs out or the server rejects its token.
+// Keeps the signed-in account on this device until it signs out or the server rejects its token.
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>();
 
   useEffect(() => {
-    SecureStore.getItemAsync(STORAGE_KEY).then((saved) => setSession(saved ? JSON.parse(saved) : null));
+    storage.getItem(STORAGE_KEY).then((saved) => setSession(saved ? JSON.parse(saved) : null));
   }, []);
 
   async function signIn(username: string, password: string) {
     const signedIn = await login(username, password);
-    await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(signedIn));
+    await storage.setItem(STORAGE_KEY, JSON.stringify(signedIn));
     setSession(signedIn);
   }
 
   async function signOut() {
-    await SecureStore.deleteItemAsync(STORAGE_KEY);
+    await storage.removeItem(STORAGE_KEY);
     setSession(null);
   }
 
