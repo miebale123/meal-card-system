@@ -1,33 +1,40 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StaffKeyRejectedError } from './api';
+import { SessionExpiredError, type UnknownCard } from './api';
+import { useAuth } from './auth';
 import Button, { TextButton } from './Button';
 import { colors, fontSize } from './theme';
-import Verdict, { notChecked, unknownCard } from './Verdict';
+import Verdict, { notChecked, unknownCard, type VerdictInfo } from './Verdict';
+
+type QrScannerProps = {
+  prompt: string;
+  onScan: (qrToken: string) => Promise<VerdictInfo | null>;
+};
 
 // Scans student QR codes. onScan(qrToken) resolves to a verdict to show, or null once the screen moves on.
-export default function QrScanner({ prompt, onScan, onSignOut }) {
+export default function QrScanner({ prompt, onScan }: QrScannerProps) {
   const insets = useSafeAreaInsets();
+  const { signOut } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [checking, setChecking] = useState(false);
-  const [verdict, setVerdict] = useState(null);
+  const [verdict, setVerdict] = useState<VerdictInfo | null>(null);
   // The camera reports the same code on every frame; the ref blocks repeats before state updates land.
   const scanLock = useRef(false);
 
-  async function handleScan({ data }) {
+  async function handleScan({ data }: BarcodeScanningResult) {
     if (scanLock.current) return;
     scanLock.current = true;
     setChecking(true);
     try {
       setVerdict(await onScan(data));
     } catch (error) {
-      if (error instanceof StaffKeyRejectedError) {
-        onSignOut();
+      if (error instanceof SessionExpiredError) {
+        signOut();
         return;
       }
-      setVerdict(notChecked(error.message));
+      setVerdict(notChecked((error as Error).message));
     } finally {
       setChecking(false);
     }
@@ -74,7 +81,7 @@ export default function QrScanner({ prompt, onScan, onSignOut }) {
         ) : (
           <View style={styles.idle}>
             <Text style={[styles.body, styles.idleText]}>{checking ? 'Checking card…' : prompt}</Text>
-            <TextButton label="Sign out" onPress={onSignOut} />
+            <TextButton label="Sign out" onPress={signOut} />
           </View>
         )}
       </View>
@@ -82,9 +89,17 @@ export default function QrScanner({ prompt, onScan, onSignOut }) {
   );
 }
 
-// Looks up each scanned card with lookup(staffKey, qrToken), then renders children(card, scanNext) for the student.
-export function ScanStudent({ staffKey, lookup, onSignOut, children }) {
-  const [card, setCard] = useState(null);
+export type ScannedCard<Card> = Card & { qrToken: string };
+
+// Looks up each scanned card with lookup(qrToken), then renders children(card, scanNext) for the student.
+export function ScanStudent<Card extends { result: 'found' }>({
+  lookup,
+  children,
+}: {
+  lookup: (qrToken: string) => Promise<Card | UnknownCard>;
+  children: (card: ScannedCard<Card>, scanNext: () => void) => ReactNode;
+}) {
+  const [card, setCard] = useState<ScannedCard<Card> | null>(null);
 
   if (card) return children(card, () => setCard(null));
 
@@ -92,12 +107,11 @@ export function ScanStudent({ staffKey, lookup, onSignOut, children }) {
     <QrScanner
       prompt="Point the camera at a student’s QR code."
       onScan={async (qrToken) => {
-        const found = await lookup(staffKey, qrToken);
+        const found = await lookup(qrToken);
         if (found.result === 'unknown_card') return unknownCard;
         setCard({ ...found, qrToken });
         return null;
       }}
-      onSignOut={onSignOut}
     />
   );
 }

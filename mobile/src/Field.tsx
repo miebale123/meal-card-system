@@ -1,7 +1,7 @@
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { colors, fontSize } from './theme';
 
-export default function Field({ label, multiline = false, ...inputProps }) {
+export default function Field({ label, multiline = false, ...inputProps }: TextInputProps & { label: string }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>

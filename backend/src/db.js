@@ -32,4 +32,10 @@ db.exec(`
     prescription TEXT NOT NULL,
     visited_at   TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS staff (
+    username      TEXT PRIMARY KEY COLLATE NOCASE, -- e.g. meal_card_admin
+    password_hash TEXT NOT NULL, -- bcrypt
+    service       TEXT NOT NULL -- meals, dorm, or clinic: the one service this account may use
+  );
 `);

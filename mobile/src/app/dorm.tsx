@@ -1,39 +1,38 @@
 import { useState } from 'react';
-import { lookupDorm, saveDorm } from '../api';
+import { lookupDorm, saveDorm, type DormAssignment, type DormStudent } from '../api';
+import { useAuth } from '../auth';
 import Button, { TextButton } from '../Button';
 import Field from '../Field';
 import FormScreen, { FormError, StudentHeading, useSubmit } from '../FormScreen';
-import { ScanStudent } from '../QrScanner';
-import StaffGate from '../StaffGate';
+import { ScanStudent, type ScannedCard } from '../QrScanner';
 import { colors } from '../theme';
 import { VerdictScreen } from '../Verdict';
 
 export default function DormScreen() {
+  const { session } = useAuth();
+  if (!session) return null;
+  const { token } = session;
   return (
-    <StaffGate service="dorm" label="dormitory">
-      {({ staffKey, signOut }) => (
-        <ScanStudent staffKey={staffKey} lookup={lookupDorm} onSignOut={signOut}>
-          {(card, scanNext) => <DormForm card={card} staffKey={staffKey} onDone={scanNext} onSignOut={signOut} />}
-        </ScanStudent>
-      )}
-    </StaffGate>
+    <ScanStudent lookup={(qrToken) => lookupDorm(token, qrToken)}>
+      {(card, scanNext) => <DormForm card={card} token={token} onDone={scanNext} />}
+    </ScanStudent>
   );
 }
 
-function DormForm({ card, staffKey, onDone, onSignOut }) {
+function DormForm({ card, token, onDone }: { card: ScannedCard<DormStudent>; token: string; onDone: () => void }) {
   const { student, assignment } = card;
   const [room, setRoom] = useState(assignment?.room ?? '');
   const [bed, setBed] = useState(assignment?.bed ?? '');
   const [items, setItems] = useState(assignment ? String(assignment.itemCount) : '');
-  const [saved, setSaved] = useState(null);
-  const { saving, error, setError, submit } = useSubmit(onSignOut);
+  const [saved, setSaved] = useState<DormAssignment | null>(null);
+  const { saving, error, setError, submit } = useSubmit();
 
-  const itemCount = /^\d{1,3}$/.test(items.trim()) ? Number(items.trim()) : null;
-  const ready = room.trim() && bed.trim() && itemCount !== null;
+  const itemCount = Number(items.trim());
+  const ready = room.trim() && bed.trim() && /^\d{1,3}$/.test(items.trim());
 
   const save = () =>
     submit(async () => {
-      const response = await saveDorm(staffKey, card.qrToken, { room: room.trim(), bed: bed.trim(), itemCount });
+      const response = await saveDorm(token, card.qrToken, { room: room.trim(), bed: bed.trim(), itemCount });
       if (response.result === 'bed_taken') {
         setError(`Room ${room.trim()}, bed ${bed.trim()} already belongs to ${response.holder.name} (${response.holder.id}).`);
         return;

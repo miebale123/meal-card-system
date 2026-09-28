@@ -1,19 +1,29 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { Student } from './api';
 import Button from './Button';
 import { colors, fontSize } from './theme';
 
-export const unknownCard = {
+export type VerdictInfo = { color: string; title: string; student?: Student; note?: string; action: string };
+
+export const unknownCard: VerdictInfo = {
   color: colors.refuse,
   title: 'Card not recognized',
   note: 'This QR code isn’t a registered student card.',
   action: 'Scan again',
 };
 
-export const notChecked = (message) => ({ color: colors.caution, title: 'Card not checked', note: message, action: 'Scan again' });
+export const notChecked = (message: string): VerdictInfo => ({
+  color: colors.caution,
+  title: 'Card not checked',
+  note: message,
+  action: 'Scan again',
+});
+
+type VerdictProps = { verdict: VerdictInfo; onDone: () => void };
 
 // A result on a solid color: headline, the student it's about, an optional note, and one button.
-export default function Verdict({ verdict, onDone }) {
+export default function Verdict({ verdict, onDone }: VerdictProps) {
   return (
     <>
       <Text style={styles.title}>{verdict.title}</Text>
@@ -29,7 +39,7 @@ export default function Verdict({ verdict, onDone }) {
   );
 }
 
-export function VerdictScreen({ verdict, onDone }) {
+export function VerdictScreen({ verdict, onDone }: VerdictProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.screen, { backgroundColor: verdict.color, paddingBottom: insets.bottom + 24 }]}>

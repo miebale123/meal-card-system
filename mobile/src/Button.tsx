@@ -1,7 +1,15 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { colors, fontSize } from './theme';
 
-export default function Button({ label, onPress, disabled = false, color = colors.ink, labelColor = colors.card }) {
+type ButtonProps = { label: string; onPress: () => void; disabled?: boolean; color?: string; labelColor?: string };
+
+export default function Button({
+  label,
+  onPress,
+  disabled = false,
+  color = colors.ink,
+  labelColor = colors.card,
+}: ButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -18,7 +26,7 @@ export default function Button({ label, onPress, disabled = false, color = color
   );
 }
 
-export function TextButton({ label, onPress }) {
+export function TextButton({ label, onPress }: Pick<ButtonProps, 'label' | 'onPress'>) {
   return (
     <Pressable accessibilityRole="button" hitSlop={12} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
       <Text style={[styles.label, styles.textLabel]}>{label}</Text>

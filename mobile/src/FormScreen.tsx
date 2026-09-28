@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, type PropsWithChildren } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StaffKeyRejectedError } from './api';
+import { SessionExpiredError, type Student } from './api';
+import { useAuth } from './auth';
 import { colors, fontSize } from './theme';
 
 // Android resizes the window for the keyboard; iOS needs the scroll view's keyboard insets.
-export default function FormScreen({ children }) {
+export default function FormScreen({ children }: PropsWithChildren) {
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
@@ -18,7 +19,7 @@ export default function FormScreen({ children }) {
   );
 }
 
-export function StudentHeading({ student }) {
+export function StudentHeading({ student }: { student: Student }) {
   return (
     <View>
       <Text style={styles.name}>{student.name}</Text>
@@ -27,26 +28,27 @@ export function StudentHeading({ student }) {
   );
 }
 
-export function FormError({ message }) {
+export function FormError({ message }: { message: string | null }) {
   return message ? <Text style={styles.error}>{message}</Text> : null;
 }
 
 // Runs a save and keeps the form open with the error message if it fails.
-export function useSubmit(onSignOut) {
+export function useSubmit() {
+  const { signOut } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  async function submit(save) {
+  async function submit(save: () => Promise<void>) {
     setSaving(true);
     setError(null);
     try {
       await save();
     } catch (e) {
-      if (e instanceof StaffKeyRejectedError) {
-        onSignOut();
+      if (e instanceof SessionExpiredError) {
+        signOut();
         return;
       }
-      setError(e.message);
+      setError((e as Error).message);
     } finally {
       setSaving(false);
     }
