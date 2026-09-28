@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Meal Card Scanner",
-    "slug": "meal-card-scanner",
-    "scheme": "meal-card-scanner",
+    "name": "KSHSmanagement",
+    "slug": "kshsmanagement",
+    "scheme": "kshsmanagement",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
