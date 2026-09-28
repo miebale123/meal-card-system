@@ -1,9 +1,15 @@
+import Constants from 'expo-constants';
 import { fetch } from 'expo/fetch';
+import { Platform } from 'react-native';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+// Unless overridden, the backend is on the computer serving the app: the page's host, or Expo's dev server on phones.
+const host = Platform.OS === 'web' ? window.location.hostname : Constants.expoConfig?.hostUri?.split(':')[0];
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? (host && `http://${host}:3000`);
 if (!API_URL) {
-  throw new Error('Set EXPO_PUBLIC_API_URL in mobile/.env, for example http://192.168.1.20:3000');
+  throw new Error('Set EXPO_PUBLIC_API_URL in mobile/.env to the server’s address, for example https://kshs.example.com');
 }
+const UNREACHABLE_HINT =
+  Platform.OS === 'web' ? 'Check that the server is running.' : 'Check that this phone is on the same Wi-Fi as the server.';
 
 export type Service = 'meals' | 'dorm' | 'clinic';
 export type Session = { token: string; user: { username: string; service: Service } };
@@ -15,7 +21,7 @@ export type DormStudent = { result: 'found'; student: Student; assignment: DormA
 export type DormSave = { result: 'saved'; assignment: DormAssignment } | { result: 'bed_taken'; holder: Student };
 export type ClinicStudent = { result: 'found'; student: Student };
 
-// The server no longer accepts this phone's sign-in, e.g. because it expired.
+// The server no longer accepts this device's sign-in, e.g. because it expired.
 export class SessionExpiredError extends Error {}
 
 async function send<T>(method: string, path: string, token: string | null, body: object): Promise<T> {
@@ -27,7 +33,7 @@ async function send<T>(method: string, path: string, token: string | null, body:
       body: JSON.stringify(body),
     });
   } catch {
-    throw new Error(`Can’t reach the server at ${API_URL}. Check that this phone is on the same Wi-Fi as the server.`);
+    throw new Error(`Can’t reach the server at ${API_URL}. ${UNREACHABLE_HINT}`);
   }
   if (response.status === 401 && token) throw new SessionExpiredError('Sign in again.');
   if (!response.ok) {

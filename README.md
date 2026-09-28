@@ -64,12 +64,10 @@ cd mobile
 npm install
 ```
 
-Set `EXPO_PUBLIC_API_URL` in `mobile/.env` to this computer's Wi-Fi address and the backend port, for example `http://192.168.1.69:3000`. Find the address with `ipconfig`.
+The app finds the backend by itself, on port 3000 of the computer serving the app: the one running Expo for phones, or the one hosting the page in the browser. Only if the backend runs somewhere else, set `EXPO_PUBLIC_API_URL` in `mobile/.env` (for example `https://kshs.example.com`) and restart Expo with `npx expo start -c`.
 
 - **Phone:** run `npx expo start` and scan the QR code with Expo Go.
 - **Web:** run `npm run web`, or press `w` in the Expo terminal, to open http://localhost:8081.
-
-After editing `mobile/.env`, restart Expo with `npx expo start -c`.
 
 In the browser:
 
@@ -81,7 +79,7 @@ Before committing app changes, run `npx expo lint` and `npx tsc --noEmit` in `mo
 
 ## Troubleshooting
 
-- **"Can't reach the server" on the phone:** the computer's Wi-Fi address has probably changed. Update `EXPO_PUBLIC_API_URL` in `mobile/.env` and restart Expo with `npx expo start -c`.
+- **"Can't reach the server":** check that the backend is running (`npm start` in `backend/`). A phone must also be on the same Wi-Fi as the computer. After switching Wi-Fi networks, restart Expo and scan its new QR code.
 - **PowerShell refuses to run `npm` or `npx`:** use `npm.cmd` and `npx.cmd`, or a Git Bash terminal.
 
 ## Never commit
