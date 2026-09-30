@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { fetch } from 'expo/fetch';
 import { Platform } from 'react-native';
+import type { Service } from './services';
 
 // Unless overridden, the backend is on the computer serving the app: the page's host, or Expo's dev server on phones.
 const host = Platform.OS === 'web' ? window.location.hostname : Constants.expoConfig?.hostUri?.split(':')[0];
@@ -11,26 +12,21 @@ if (!API_URL) {
 const UNREACHABLE_HINT =
   Platform.OS === 'web' ? 'Check that the server is running.' : 'Check that this phone is on the same Wi-Fi as the server.';
 
-export type Service = 'meals' | 'dorm' | 'clinic';
-export type Session = { token: string; user: { username: string; service: Service } };
+export type Session = { token: string; user: { username: string; service: Service | 'superadmin' } };
 export type Student = { id: string; name: string };
-export type DormAssignment = { room: string; bed: string; itemCount: number };
+// What scan and lookup calls resolve to for QR codes that aren't registered.
 export type UnknownCard = { result: 'unknown_card' };
-export type MealScan = { result: 'ticked' | 'already_ticked'; student: Student; tickedAt: string } | UnknownCard;
-export type DormStudent = { result: 'found'; student: Student; assignment: DormAssignment | null };
-export type DormSave = { result: 'saved'; assignment: DormAssignment } | { result: 'bed_taken'; holder: Student };
-export type ClinicStudent = { result: 'found'; student: Student };
 
 // The server no longer accepts this device's sign-in, e.g. because it expired.
 export class SessionExpiredError extends Error {}
 
-async function send<T>(method: string, path: string, token: string | null, body: object): Promise<T> {
+export async function send<T>(method: string, path: string, token: string | null, body?: object): Promise<T> {
   let response;
   try {
     response = await fetch(`${API_URL}${path}`, {
       method,
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify(body),
+      body: body && JSON.stringify(body),
     });
   } catch {
     throw new Error(`Can’t reach the server at ${API_URL}. ${UNREACHABLE_HINT}`);
@@ -45,19 +41,3 @@ async function send<T>(method: string, path: string, token: string | null, body:
 
 export const login = (username: string, password: string) =>
   send<Session>('POST', '/api/auth/login', null, { username, password });
-
-// Scan and lookup calls resolve to { result: 'unknown_card' } for QR codes that aren't registered.
-export const scanMealCard = (token: string, qrToken: string) =>
-  send<MealScan>('POST', '/api/meals/scan', token, { qrToken });
-
-export const lookupDorm = (token: string, qrToken: string) =>
-  send<DormStudent | UnknownCard>('POST', '/api/dorm/lookup', token, { qrToken });
-
-export const saveDorm = (token: string, qrToken: string, assignment: DormAssignment) =>
-  send<DormSave>('PUT', '/api/dorm/assignment', token, { qrToken, ...assignment });
-
-export const lookupClinicStudent = (token: string, qrToken: string) =>
-  send<ClinicStudent | UnknownCard>('POST', '/api/clinic/lookup', token, { qrToken });
-
-export const addClinicVisit = (token: string, qrToken: string, visit: { diagnosis: string; prescription: string }) =>
-  send<{ result: 'saved' }>('POST', '/api/clinic/visits', token, { qrToken, ...visit });

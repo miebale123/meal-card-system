@@ -10,5 +10,6 @@ export const colors = {
 
 export const fontSize = {
   body: 17,
+  heading: 22,
   display: 34,
 };

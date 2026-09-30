@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-export const db = new DatabaseSync(path.join(import.meta.dirname, '..', 'meal-card.db'));
+export const db = new DatabaseSync(path.join(import.meta.dirname, '..', '..', 'meal-card.db'));
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS students (
@@ -36,6 +36,6 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS staff (
     username      TEXT PRIMARY KEY COLLATE NOCASE, -- e.g. meal_card_admin
     password_hash TEXT NOT NULL, -- bcrypt
-    service       TEXT NOT NULL -- meals, dorm, or clinic: the one service this account may use
+    service       TEXT NOT NULL -- meals, dorm, clinic, or superadmin: the one section this account may use
   );
 `);

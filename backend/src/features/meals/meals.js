@@ -1,4 +1,4 @@
-import { db } from './db.js';
+import { db } from '../../core/db.js';
 
 const insertTick = db.prepare(
   'INSERT INTO meal_ticks (student_id, meal_date, ticked_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING',

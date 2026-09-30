@@ -1,4 +1,4 @@
-import { db } from './db.js';
+import { db } from '../../core/db.js';
 
 const insertVisit = db.prepare(
   'INSERT INTO clinic_visits (student_id, diagnosis, prescription, visited_at) VALUES (?, ?, ?, ?)',

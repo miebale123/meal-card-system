@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import QRCode from 'qrcode';
-import { addStudent } from '../src/students.js';
+import { addStudent } from '../src/core/students.js';
 
 const [id, name] = process.argv.slice(2).map((arg) => arg.trim());
 if (!id || !name) {

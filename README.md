@@ -1,12 +1,14 @@
 # KSHSmanagement
 
-School services for the meal card (cafeteria), dormitory, and clinic. Staff sign in and scan students' QR cards. One Expo app runs on phones and in the browser, backed by a small Node.js server. See [docs/architecture.md](docs/architecture.md) for why every service lives in this one repository.
+School services for the meal card (cafeteria), dormitory, and clinic. Staff sign in and scan students' QR cards, and a superadmin registers the staff accounts. One Expo app runs on phones and in the browser, backed by a small Node.js server. See [docs/architecture.md](docs/architecture.md) for why every service lives in this one repository.
 
 | Folder | Contents |
 | --- | --- |
 | `backend/` | Node.js API (Express and SQLite) |
 | `mobile/` | Expo app for phones and the web |
 | `docs/` | Design notes |
+
+Inside `backend/src/` and `mobile/src/`, shared code lives in `core/` and each service in its own `features/` folder.
 
 ## Requirements
 
@@ -36,7 +38,20 @@ Start the server with `npm start`.
 
 ### Staff accounts
 
-Each account belongs to one service and only opens that service's page after signing in:
+Each account opens one page after signing in:
+
+| Account | Opens |
+| --- | --- |
+| Superadmin | Administration, to register admins and see who has an account |
+| Admin | Its one service: meal card, dormitory, or clinic |
+
+Create the superadmin on the server:
+
+```bash
+npm run add-staff -- super_admin superadmin
+```
+
+The superadmin then registers the admins in the app. Admins can also be created on the server:
 
 ```bash
 npm run add-staff -- meal_card_admin meals
@@ -45,7 +60,8 @@ npm run add-staff -- clinic_admin clinic
 ```
 
 - The script asks for a password of at least 8 characters.
-- Passwords are stored hashed and can't be looked up later. To set a new one, run the command again with the same username.
+- Passwords are stored hashed and can't be looked up later. To set a new one, run the command again with the same username. The Administration page only adds new accounts.
+- The superadmin manages accounts only and can't open any service's records.
 - A device gets 5 wrong passwords every 15 minutes.
 - A sign-in lasts 7 days.
 

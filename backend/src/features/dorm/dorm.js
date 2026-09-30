@@ -1,4 +1,4 @@
-import { db } from './db.js';
+import { db } from '../../core/db.js';
 
 const selectAssignment = db.prepare(
   'SELECT room, bed, item_count AS itemCount FROM dorm_assignments WHERE student_id = ?',
